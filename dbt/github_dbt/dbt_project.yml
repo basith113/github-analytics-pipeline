@@ -1,0 +1,71 @@
+
+# Name your project! Project names should be lowercase and use underscores as spaces.
+name: 'github_dbt'
+version: '1.0.0'
+config-version: 2
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'github_dbt'
+
+# These configurations specify where dbt should look for different types of files.
+model-paths: ["models"]
+analysis-paths: ["analysis"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Require-dbt-version checks that dbt version is >= 1.0.0 and < 2.0.0
+require-dbt-version: [">=1.10.0", "<2.0.0"]
+
+# Configure models
+models:
+  github_dbt:
+    # Config applied to all models within models folder
+    +materialized: view
+    +schema: STAGING
+    
+    staging:
+      +materialized: view
+      +schema: STAGING
+      +tags: ["staging"]
+    
+    marts:
+      +materialized: table
+      +schema: MARTS
+      +tags: ["marts"]
+      
+      dimensions:
+        +materialized: table
+        +schema: MARTS
+        +tags: ["dimensions"]
+        
+      facts:
+        +materialized: incremental
+        +schema: MARTS
+        +tags: ["facts"]
+
+# Configure variables
+vars:
+  # Data loading variables
+  load_batch_size: 5000
+  max_lookback_days: 7
+  
+  # dbt variables
+  dbt_run_timestamp: '{{ run_started_at.strftime("%Y-%m-%d %H:%M:%S") }}'
+  dbt_run_id: '{{ run_started_at.strftime("%Y%m%d_%H%M%S") }}'
+
+# Configure dispatch (macros resolution)
+dispatch:
+  - macro_namespace: dbt_utils
+    search_order: ['github_dbt', 'dbt_utils']
+
+# Tests
+tests:
+  github_dbt:
+    +schema: TESTS
+    +severity: warn  # Default test severity

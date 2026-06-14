@@ -1,0 +1,149 @@
+version: 2
+
+models:
+  - name: stg_actors
+    description: |
+      Actor (user/bot) dimension with activity dates.
+      Extracted from stg_github_events to remove duplicates.
+      
+      **Grain**: One row per unique actor (actor_id)
+      **Volume**: ~100K actors from 7-day backfill
+      **Materialization**: View
+      **Schema**: STAGING
+    
+    columns:
+      - name: actor_id
+        description: Unique GitHub actor ID
+        tests:
+          - not_null
+          - unique
+      
+      - name: actor_login
+        description: GitHub username or bot name
+        tests:
+          - not_null
+      
+      - name: actor_type
+        description: Type of actor (User or Bot)
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['User', 'Bot']
+      
+      - name: first_seen_at
+        description: First time this actor appeared in events
+        tests:
+          - not_null
+      
+      - name: last_seen_at
+        description: Most recent time this actor appeared
+        tests:
+          - not_null
+      
+      - name: days_active
+        description: Number of days between first and last event
+      
+      - name: dbt_loaded_at
+        description: When this record was created by dbt
+  
+  - name: stg_repositories
+    description: |
+      Repository dimension with owner/name parsed.
+      Extracted from stg_github_events to remove duplicates.
+      
+      **Grain**: One row per unique repository (repo_id)
+      **Volume**: ~150K repositories from 7-day backfill
+      **Materialization**: View
+      **Schema**: STAGING
+    
+    columns:
+      - name: repo_id
+        description: Unique GitHub repository ID
+        tests:
+          - not_null
+          - unique
+      
+      - name: repo_name
+        description: Repository full name (owner/name)
+        tests:
+          - not_null
+      
+      - name: repo_owner
+        description: Repository owner (extracted from repo_name)
+        tests:
+          - not_null
+      
+      - name: repo_short_name
+        description: Repository short name (extracted from repo_name)
+        tests:
+          - not_null
+      
+      - name: first_event_at
+        description: First event recorded for this repository
+        tests:
+          - not_null
+      
+      - name: last_event_at
+        description: Most recent event for this repository
+        tests:
+          - not_null
+      
+      - name: days_active
+        description: Number of days between first and last event
+      
+      - name: dbt_loaded_at
+        description: When this record was created by dbt
+  
+  - name: stg_event_types
+    description: |
+      Event type enumeration with counts and percentages.
+      Shows all unique event types and their distribution.
+      
+      **Grain**: One row per event type
+      **Volume**: 11 standard event types
+      **Materialization**: View
+      **Schema**: STAGING
+    
+    columns:
+      - name: event_type
+        description: GitHub event type name
+        tests:
+          - not_null
+          - unique
+      
+      - name: event_count
+        description: Total number of events of this type
+        tests:
+          - not_null
+      
+      - name: unique_actors
+        description: Number of unique actors who triggered this event type
+        tests:
+          - not_null
+      
+      - name: unique_repos
+        description: Number of unique repositories with this event type
+        tests:
+          - not_null
+      
+      - name: first_occurrence
+        description: First time this event type appeared in data
+        tests:
+          - not_null
+      
+      - name: last_occurrence
+        description: Most recent occurrence of this event type
+        tests:
+          - not_null
+      
+      - name: percent_of_total_events
+        description: Percentage of all events that are this type
+        tests:
+          - not_null
+      
+      - name: event_description
+        description: Human-readable description of event type
+      
+      - name: dbt_loaded_at
+        description: When this record was created by dbt

@@ -1,0 +1,201 @@
+# GitHub Analytics Pipeline Configuration
+# Main configuration file for all pipeline components
+
+# ============================================================
+# GH ARCHIVE SETTINGS
+# ============================================================
+gharchive:
+  # Base URL for GH Archive
+  base_url: "https://data.gharchive.org"
+  
+  # HTTP settings
+  timeout_seconds: 30
+  max_retries: 3
+  retry_delay_seconds: 5
+  
+  # File validation
+  validate_file_size: true
+  min_file_size_bytes: 1000  # Skip files smaller than 1KB
+  
+  # Decompression settings
+  decompress_format: "gzip"  # .json.gz
+
+# ============================================================
+# SNOWFLAKE SETTINGS
+# ============================================================
+snowflake:
+  # Connection pooling
+  pool_size: 10
+  
+  # Batch loading parameters
+  chunk_size: 5000              # Records per batch insert
+  timeout_seconds: 300
+  
+  # Error handling strategy
+  # Options: "log_and_skip", "fail_on_error", "alert_and_continue"
+  error_handling: "log_and_skip"
+  
+  # Performance tuning
+  use_sessions: true
+  enable_query_caching: true
+
+# ============================================================
+# PIPELINE PHASES CONFIGURATION
+# ============================================================
+pipeline:
+  # Backfill phase settings
+  backfill:
+    # Number of days to load from past
+    days_to_load: 7
+    
+    # Hour range (0-23)
+    start_hour: 0
+    end_hour: 23
+    
+    # Skip weekends (optional optimization)
+    skip_weekends: false
+  
+  # Incremental load settings
+  incremental:
+    # Look back N hours for latest file
+    # (handles potential delays in GH Archive)
+    look_back_hours: 2
+    
+    # Schedule interval (in minutes)
+    schedule_interval_minutes: 60
+  
+  # Data quality phase
+  quality_checks:
+    # Run quality checks after load
+    run_after_load: true
+    
+    # Fail pipeline if checks fail
+    fail_on_check_failure: false
+    
+    # Expected minimum rows per day
+    min_rows_per_day: 100000
+
+# ============================================================
+# DBT SETTINGS
+# ============================================================
+dbt:
+  # Project path
+  project_dir: "dbt/github_dbt"
+  
+  # Thread count for parallelization
+  threads: 4
+  
+  # Execution settings
+  strict_mode: false
+  fail_fast: true  # Stop on first model failure
+  
+  # Model selection patterns
+  models:
+    # Run these models on every execution
+    always_run:
+      - "stg_*"
+      - "dim_*"
+      - "fact_*"
+
+# ============================================================
+# LOGGING CONFIGURATION
+# ============================================================
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+  
+  # Log file path
+  log_file: "logs/pipeline.log"
+  
+  # File rotation settings
+  max_file_size_mb: 100
+  backup_count: 5
+  
+  # Log format
+  # {time} {level} {module} {message}
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # Separate logs for different components
+  separate_logs:
+    ingestion: "logs/ingestion.log"
+    dbt: "logs/dbt.log"
+    airflow: "logs/airflow.log"
+
+# ============================================================
+# MONITORING & ALERTING
+# ============================================================
+monitoring:
+  # Enable monitoring
+  enabled: true
+  
+  # Metrics to track
+  track_metrics:
+    - rows_loaded
+    - load_duration_seconds
+    - error_count
+    - data_quality_score
+  
+  # Email alerts (future enhancement)
+  alerts:
+    enabled: false
+    smtp_server: "smtp.gmail.com"
+    recipients:
+      - "alerts@example.com"
+    
+    # Alert on these events
+    alert_on:
+      - "load_failure"
+      - "data_quality_failure"
+      - "dbt_failure"
+
+# ============================================================
+# FEATURE FLAGS
+# ============================================================
+features:
+  # Data validation
+  validate_on_download: true
+  validate_json_structure: true
+  
+  # Deduplication
+  track_load_history: true
+  skip_already_loaded: true
+  
+  # Optimization
+  compress_archives: false
+  parallel_downloads: false
+  
+  # Advanced features (future)
+  incremental_snapshots: false
+  enable_predictions: false
+
+# ============================================================
+# DEVELOPMENT & TESTING
+# ============================================================
+development:
+  # Run in test mode (doesn't actually write to Snowflake)
+  test_mode: false
+  
+  # Limit records for testing
+  limit_records: null  # null = no limit
+  
+  # Debug logging
+  debug: false
+  
+  # Profile code execution
+  profile_execution: false
+
+# ============================================================
+# STORAGE & RETENTION
+# ============================================================
+storage:
+  # Snowflake database retention
+  time_travel_days: 1
+  fail_safe_days: 7
+  
+  # Local cache settings
+  cache_dir: ".cache"
+  cache_ttl_hours: 24
+  
+  # Cleanup settings
+  cleanup_local_files_after_load: true
+  cleanup_old_logs_after_days: 30

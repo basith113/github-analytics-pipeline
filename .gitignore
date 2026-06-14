@@ -1,0 +1,27 @@
+# Virtual environments
+venv/
+.venv/
+
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+logs/
+*.log
+
+# dbt
+target/
+dbt_packages/
+
+# Airflow
+.airflow/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store

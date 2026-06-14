@@ -1,0 +1,94 @@
+# Logging Configuration
+# Python logging configuration in YAML format
+# Used by Python logging.config.dictConfig()
+
+version: 1
+disable_existing_loggers: false
+
+# Define custom log formatters
+formatters:
+  standard:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+  
+  detailed:
+    format: '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(funcName)s() - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+  
+  json_formatter:
+    format: '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s", "module": "%(filename)s", "line": %(lineno)d}'
+    datefmt: '%Y-%m-%dT%H:%M:%S'
+
+# Define log handlers (where logs go)
+handlers:
+  # Console output (stdout)
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: standard
+    stream: ext://sys.stdout
+  
+  # Main pipeline log file
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/pipeline.log
+    maxBytes: 104857600  # 100 MB
+    backupCount: 5
+    encoding: utf-8
+  
+  # Ingestion module logs
+  ingestion_file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/ingestion.log
+    maxBytes: 104857600  # 100 MB
+    backupCount: 5
+    encoding: utf-8
+  
+  # dbt logs
+  dbt_file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/dbt.log
+    maxBytes: 52428800  # 50 MB
+    backupCount: 3
+    encoding: utf-8
+  
+  # Snowflake logs (separate for debugging)
+  snowflake_file:
+    class: logging.handlers.RotatingFileHandler
+    level: WARNING
+    formatter: detailed
+    filename: logs/snowflake.log
+    maxBytes: 52428800  # 50 MB
+    backupCount: 3
+    encoding: utf-8
+
+# Define loggers for different modules
+loggers:
+  # Ingestion module
+  ingestion:
+    level: DEBUG
+    handlers: [console, file, ingestion_file]
+    propagate: false
+  
+  # Snowflake module
+  snowflake:
+    level: WARNING
+    handlers: [snowflake_file]
+    propagate: false
+  
+  # dbt module
+  dbt:
+    level: DEBUG
+    handlers: [dbt_file]
+    propagate: false
+
+# Root logger (catches everything not matched by specific loggers)
+root:
+  level: DEBUG
+  handlers: [console, file]

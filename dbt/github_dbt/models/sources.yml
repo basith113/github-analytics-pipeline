@@ -1,0 +1,142 @@
+# Sources documentation for GitHub Analytics Pipeline
+# These tables are loaded by Phase 4-5 ingestion scripts
+# Data comes from GH Archive: https://www.gharchive.org/
+
+version: 2
+
+sources:
+  - name: github_archive
+    description: "Raw GitHub events from GH Archive (https://www.gharchive.org)"
+    database: GITHUB_DBT
+    schema: RAW
+    loader: GH Archive + Python ingestion scripts (Phases 4-5)
+    config:
+      freshness:
+        warn_after:
+          count: 2
+          period: hour
+        error_after:
+          count: 4
+          period: hour
+      loaded_at_field: LOAD_TS
+      meta:
+        owner: Data Engineering
+        sla: "Loaded within 1 hour of event creation"
+        refresh_frequency: "Hourly"
+        quality_checks:
+          - "No null event IDs"
+          - "Unique event IDs only"
+          - "Valid event types"
+          - "Timestamps in UTC"
+          - "Row counts within normal range"
+    
+    tables:
+      - name: github_events
+        description: |
+          Raw GitHub events in NDJSON format stored as VARIANT JSON.
+          Loaded hourly from https://data.gharchive.org/{YYYY-MM-DD-H}.json.gz
+          
+          Event types include:
+          - PushEvent: Code pushed to repository
+          - PullRequestEvent: Pull request opened/closed/reopened
+          - IssuesEvent: Issue opened/closed/reopened
+          - IssueCommentEvent: Comment added to issue/PR
+          - WatchEvent: User starred a repository
+          - ForkEvent: Repository forked
+          - CreateEvent: Branch or tag created
+          - DeleteEvent: Branch or tag deleted
+          - MemberEvent: Collaborator added
+          - ReleaseEvent: Release published
+          - PullRequestReviewEvent: PR review submitted
+        
+        columns:
+          - name: raw_data
+            description: |
+              Complete GitHub event JSON (VARIANT type)
+              Contains all event fields: id, type, actor, repo, created_at, etc.
+            data_type: VARIANT
+            tests:
+              - not_null
+          
+          - name: file_name
+            description: |
+              Source file name from GH Archive
+              Format: YYYY-MM-DD-H.json.gz
+              Used for deduplication
+            data_type: VARCHAR
+            tests:
+              - not_null
+              - unique
+          
+          - name: load_ts
+            description: "Timestamp when event was loaded into Snowflake"
+            data_type: TIMESTAMP_NTZ
+            tests:
+              - not_null
+          
+          - name: _inserted_at
+            description: "System timestamp (legacy)"
+            data_type: TIMESTAMP_NTZ
+          
+          - name: _file_row_number
+            description: "Row number within the GH Archive file"
+            data_type: INTEGER
+      
+      - name: load_history
+        description: |
+          Audit trail of all file loads
+          Tracks status, row counts, errors, and retry attempts
+          Primary key: FILE_NAME ensures no duplicate loads
+        
+        columns:
+          - name: file_name
+            description: |
+              Source file name (YYYY-MM-DD-H.json.gz)
+              Primary key - prevents duplicate loads
+            data_type: VARCHAR
+            tests:
+              - not_null
+              - unique
+          
+          - name: load_ts
+            description: "When the file was loaded"
+            data_type: TIMESTAMP_NTZ
+            tests:
+              - not_null
+          
+          - name: file_hour
+            description: "Hour the file covers (YYYY-MM-DD HH:00)"
+            data_type: VARCHAR
+          
+          - name: row_count
+            description: "Number of events successfully loaded"
+            data_type: INTEGER
+          
+          - name: file_size_bytes
+            description: "Compressed file size in bytes"
+            data_type: INTEGER
+          
+          - name: status
+            description: "Load status: SUCCESS, FAILED, SKIPPED, RETRY"
+            data_type: VARCHAR
+            tests:
+              - accepted_values:
+                  arguments:
+                    values: ['SUCCESS', 'FAILED', 'SKIPPED', 'RETRY']
+          
+          - name: error_message
+            description: "Error details if status is FAILED"
+            data_type: VARCHAR
+          
+          - name: retry_count
+            description: "Number of retry attempts"
+            data_type: INTEGER
+          
+          - name: load_duration_seconds
+            description: "Time taken to load the file"
+            data_type: FLOAT
+          
+          - name: loaded_by
+            description: "Username or script name that loaded the file"
+            data_type: VARCHAR
+

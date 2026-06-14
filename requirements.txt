@@ -1,0 +1,41 @@
+# Core Data Engineering Libraries
+requests==2.32.4              # HTTP client for GH Archive API
+pandas==2.3.1                 # Data manipulation and analysis
+numpy==1.26.0                 # Numerical computing
+pytz==2024.1                  # Timezone handling
+
+# Snowflake Integration
+snowflake-connector-python==3.17.3    # Snowflake database connector
+snowflake-sqlalchemy==1.5.1           # SQLAlchemy dialect for Snowflake
+
+# dbt (Data Build Tool)
+dbt-core==1.10.4              # dbt core functionality
+dbt-snowflake==1.10.0         # dbt Snowflake adapter
+
+# Configuration & Environment
+python-dotenv==1.1.1          # Load environment variables from .env
+pyyaml==6.0.2                 # YAML parsing for config files
+
+# Logging & Monitoring
+python-json-logger==2.0.7     # Structured JSON logging
+
+# Airflow (for orchestration phase)
+apache-airflow==2.8.0         # Workflow orchestration platform
+apache-airflow-providers-snowflake==5.2.1  # Snowflake provider for Airflow
+
+# Data Quality & Testing
+great-expectations==0.18.0    # Data quality framework (optional)
+
+# Jupyter for Notebooks
+jupyter==1.0.0                # Jupyter notebook server
+jupyterlab==4.1.0             # JupyterLab IDE
+
+# Development & Testing
+pytest==7.4.0                 # Testing framework
+black==24.1.0                 # Code formatter
+flake8==7.0.0                 # Code linter
+mypy==1.8.0                   # Static type checker
+
+# Utilities
+python-dateutil==2.8.2        # Date and time utilities
+tqdm==4.66.0                  # Progress bar library

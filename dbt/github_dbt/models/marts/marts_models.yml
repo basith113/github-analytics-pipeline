@@ -1,0 +1,374 @@
+version: 2
+
+models:
+  - name: dim_actor
+    description: |
+      GitHub actor dimension table with Type 2 SCD (Slowly Changing Dimensions).
+      Tracks users and bots with their activity history.
+      
+      **Grain**: One row per actor (unique actor_id)
+      **Volume**: ~100K actors
+      **Materialization**: Table
+      **Schema**: MARTS
+      **SCD Type**: Type 2 (tracks history)
+      **Keys**: 
+        - Surrogate Key: actor_key (dbt-generated)
+        - Natural Key: actor_id
+        - History: dbt_valid_from, dbt_valid_to
+      
+      Use this for:
+      - Filtering by actor type (User vs Bot)
+      - Analyzing developer activity
+      - Identifying automated contributions
+    
+    columns:
+      - name: actor_key
+        description: Surrogate key (dbt-generated UUID)
+        tests:
+          - not_null
+          - unique
+      
+      - name: actor_id
+        description: GitHub actor ID (natural key)
+        tests:
+          - not_null
+      
+      - name: actor_login
+        description: GitHub username or bot name
+        tests:
+          - not_null
+      
+      - name: actor_type
+        description: User or Bot
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['User', 'Bot']
+      
+      - name: is_bot
+        description: Boolean flag (true if actor_type = Bot)
+        tests:
+          - not_null
+      
+      - name: first_seen_at
+        description: First event date for this actor
+        tests:
+          - not_null
+      
+      - name: last_seen_at
+        description: Most recent event date for this actor
+        tests:
+          - not_null
+      
+      - name: days_active
+        description: Number of days between first and last event
+      
+      - name: dbt_valid_from
+        description: SCD Type 2 - valid from timestamp
+        tests:
+          - not_null
+      
+      - name: dbt_valid_to
+        description: SCD Type 2 - valid until timestamp
+        tests:
+          - not_null
+      
+      - name: dbt_is_current
+        description: SCD Type 2 - true for current record
+        tests:
+          - not_null
+      
+      - name: dbt_created_at
+        description: Timestamp when record was created
+        tests:
+          - not_null
+      
+      - name: dbt_updated_at
+        description: Timestamp when record was last updated
+        tests:
+          - not_null
+  
+  - name: dim_repository
+    description: |
+      GitHub repository dimension table with Type 1 SCD (no history).
+      Describes repositories and their characteristics.
+      
+      **Grain**: One row per repository (unique repo_id)
+      **Volume**: ~150K repositories
+      **Materialization**: Table
+      **Schema**: MARTS
+      **SCD Type**: Type 1 (no history)
+      **Keys**:
+        - Surrogate Key: repo_key (dbt-generated)
+        - Natural Key: repo_id
+    
+    columns:
+      - name: repo_key
+        description: Surrogate key (dbt-generated UUID)
+        tests:
+          - not_null
+          - unique
+      
+      - name: repo_id
+        description: GitHub repository ID (natural key)
+        tests:
+          - not_null
+      
+      - name: repo_name
+        description: Repository full name (owner/name)
+        tests:
+          - not_null
+      
+      - name: repo_owner
+        description: Repository owner (extracted from repo_name)
+        tests:
+          - not_null
+      
+      - name: repo_short_name
+        description: Repository short name (extracted from repo_name)
+        tests:
+          - not_null
+      
+      - name: is_test_repo
+        description: Boolean flag for test/example repositories
+        tests:
+          - not_null
+      
+      - name: first_event_at
+        description: First event recorded for this repository
+        tests:
+          - not_null
+      
+      - name: last_event_at
+        description: Most recent event for this repository
+        tests:
+          - not_null
+      
+      - name: days_active
+        description: Number of days between first and last event
+      
+      - name: dbt_created_at
+        description: Timestamp when record was created
+        tests:
+          - not_null
+      
+      - name: dbt_updated_at
+        description: Timestamp when record was last updated
+        tests:
+          - not_null
+  
+  - name: dim_event_type
+    description: |
+      GitHub event type dimension table - static reference data.
+      Enumerates all event types with descriptions and statistics.
+      
+      **Grain**: One row per event type
+      **Volume**: 11 standard event types
+      **Materialization**: Table
+      **Schema**: MARTS
+      **Keys**:
+        - Surrogate Key: event_type_key (dbt-generated)
+        - Natural Key: event_type
+    
+    columns:
+      - name: event_type_key
+        description: Surrogate key (dbt-generated UUID)
+        tests:
+          - not_null
+          - unique
+      
+      - name: event_type
+        description: GitHub event type name
+        tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values: ['PushEvent', 'PullRequestEvent', 'IssuesEvent',
+                        'IssueCommentEvent', 'WatchEvent', 'ForkEvent',
+                        'CreateEvent', 'DeleteEvent', 'MemberEvent',
+                        'ReleaseEvent', 'PullRequestReviewEvent']
+      
+      - name: event_description
+        description: Human-readable description of event type
+        tests:
+          - not_null
+      
+      - name: event_category
+        description: Broader category (Activity, Collaboration, Engagement, etc.)
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Activity', 'Repository Management', 'Engagement', 
+                        'Collaboration', 'Other']
+      
+      - name: event_count
+        description: Total events of this type in dataset
+        tests:
+          - not_null
+      
+      - name: unique_actors
+        description: Number of unique actors triggering this event type
+        tests:
+          - not_null
+      
+      - name: unique_repos
+        description: Number of unique repositories with this event type
+        tests:
+          - not_null
+      
+      - name: percent_of_total_events
+        description: Percentage of all events this type represents
+        tests:
+          - not_null
+      
+      - name: first_occurrence
+        description: First time this event type appeared in data
+        tests:
+          - not_null
+      
+      - name: last_occurrence
+        description: Most recent occurrence of this event type
+        tests:
+          - not_null
+      
+      - name: dbt_created_at
+        description: Timestamp when record was created
+        tests:
+          - not_null
+      
+      - name: dbt_updated_at
+        description: Timestamp when record was last updated
+        tests:
+          - not_null
+  
+  - name: fact_events
+    description: |
+      GitHub events transaction fact table.
+      One row per GitHub event with links to dimensions.
+      
+      **Grain**: One row per GitHub event
+      **Volume**: ~2.5M events from 7-day backfill, ~10K/hour incremental
+      **Materialization**: Table (incremental in Phase 10)
+      **Schema**: MARTS
+      **Keys**:
+        - Surrogate Key: event_key (dbt-generated)
+        - Natural Key: event_id
+        - Foreign Keys: actor_key, repo_key, event_type_key
+    
+    columns:
+      - name: event_key
+        description: Surrogate key (dbt-generated UUID)
+        tests:
+          - not_null
+          - unique
+      
+      - name: event_id
+        description: GitHub event ID (natural key)
+        tests:
+          - not_null
+          - unique
+      
+      - name: actor_key
+        description: Foreign key to dim_actor
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_actor')
+                field: actor_key
+      
+      - name: repo_key
+        description: Foreign key to dim_repository
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_repository')
+                field: repo_key
+      
+      - name: event_type_key
+        description: Foreign key to dim_event_type
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_event_type')
+                field: event_type_key
+      
+      - name: event_type
+        description: Event type (denormalized for query performance)
+        tests:
+          - not_null
+      
+      - name: actor_id
+        description: GitHub actor ID (denormalized)
+        tests:
+          - not_null
+      
+      - name: actor_login
+        description: Actor username (denormalized)
+        tests:
+          - not_null
+      
+      - name: repo_id
+        description: Repository ID (denormalized)
+        tests:
+          - not_null
+      
+      - name: repo_name
+        description: Repository name (denormalized)
+        tests:
+          - not_null
+      
+      - name: created_at
+        description: When the event occurred (UTC)
+        tests:
+          - not_null
+      
+      - name: event_date
+        description: Date the event occurred (extracted from created_at)
+        tests:
+          - not_null
+      
+      - name: event_hour
+        description: Hour of day (0-23) when event occurred
+        tests:
+          - not_null
+      
+      - name: event_day_of_week
+        description: Day of week name (Monday, Tuesday, etc.)
+        tests:
+          - not_null
+      
+      - name: event_week
+        description: ISO week number
+        tests:
+          - not_null
+      
+      - name: event_month
+        description: Month number (1-12)
+        tests:
+          - not_null
+      
+      - name: event_year
+        description: Year (e.g., 2024)
+        tests:
+          - not_null
+      
+      - name: source_file
+        description: GH Archive source file name
+        tests:
+          - not_null
+      
+      - name: loaded_at
+        description: When event was loaded to RAW schema
+        tests:
+          - not_null
+      
+      - name: dbt_created_at
+        description: When this fact record was created
+        tests:
+          - not_null
