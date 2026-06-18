@@ -404,10 +404,3 @@ Portfolio project - for demonstration and learning purposes.
 
 
 git clone <your-repo-url>
-cd github-analytics-pipeline
-cp .env.example .env
-# fill Snowflake account details in .env
-bash scripts/setup_fresh_machine.sh
-
-
-bash scripts/bootstrap_new_snowflake_account.sh
