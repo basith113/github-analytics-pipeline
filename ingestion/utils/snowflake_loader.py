@@ -11,9 +11,12 @@ Responsible for:
 
 import json
 import logging
+import gzip
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 import os
+import tempfile
+import uuid
 from dotenv import load_dotenv
 import snowflake.connector
 from snowflake.connector import DictCursor
@@ -273,7 +276,7 @@ class SnowflakeLoader:
                     
                     # Insert row
                     cursor.execute(
-                        "INSERT INTO RAW.GITHUB_EVENTS (RAW_DATA, FILE_NAME) VALUES (PARSE_JSON(%s), %s)",
+                        "INSERT INTO RAW.GITHUB_EVENTS (RAW_DATA, FILE_NAME) SELECT PARSE_JSON(%s), %s",
                         (raw_data, file_name)
                     )
                     inserted += 1
@@ -293,6 +296,65 @@ class SnowflakeLoader:
             raise
         finally:
             cursor.close()
+
+    def _copy_events_via_stage(self, events: List[dict], file_name: str) -> int:
+        """Load a full GH Archive file through a temporary Snowflake stage."""
+        cursor = self.connection.cursor()
+        stage_name = f"RAW.GITHUB_EVENTS_STAGE_{uuid.uuid4().hex.upper()}"
+        temp_path = ""
+
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="wb",
+                suffix=".json.gz",
+                prefix="github_events_",
+                delete=False,
+            ) as temp_file:
+                temp_path = temp_file.name
+
+            with gzip.open(temp_path, "wt", encoding="utf-8") as json_file:
+                for event in events:
+                    json_file.write(json.dumps(event, separators=(",", ":")))
+                    json_file.write("\n")
+
+            put_path = temp_path.replace("\\", "/")
+            put_uri = f"file://{put_path}" if put_path.startswith("/") else f"file:///{put_path}"
+            escaped_file_name = file_name.replace("'", "''")
+
+            cursor.execute(f"CREATE TEMPORARY STAGE {stage_name} FILE_FORMAT = (TYPE = JSON)")
+            cursor.execute(f"PUT '{put_uri}' @{stage_name} AUTO_COMPRESS=FALSE OVERWRITE=TRUE")
+            cursor.execute(
+                f"""
+                COPY INTO RAW.GITHUB_EVENTS (RAW_DATA, FILE_NAME)
+                FROM (
+                    SELECT $1, '{escaped_file_name}'
+                    FROM @{stage_name}
+                )
+                FILE_FORMAT = (TYPE = JSON)
+                ON_ERROR = 'ABORT_STATEMENT'
+                """
+            )
+
+            copy_results = cursor.fetchall()
+            rows_loaded = 0
+            for row in copy_results:
+                if len(row) > 3 and isinstance(row[3], int):
+                    rows_loaded += row[3]
+
+            self.connection.commit()
+            logger.info("Snowflake COPY loaded %s rows from %s", rows_loaded, file_name)
+            return rows_loaded
+        except Exception:
+            self.connection.rollback()
+            raise
+        finally:
+            try:
+                cursor.execute(f"DROP STAGE IF EXISTS {stage_name}")
+            except Exception as drop_error:
+                logger.warning("Could not drop temporary stage %s: %s", stage_name, drop_error)
+            cursor.close()
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
     
     def load_events(
         self,
@@ -330,22 +392,8 @@ class SnowflakeLoader:
             else:
                 raise RuntimeError(f"File already loaded: {file_name}")
         
-        # Insert in batches
-        total_inserted = 0
-        total_batches = (len(events) + self.batch_size - 1) // self.batch_size
-        
         with Timer(f"Load {file_name}", logger):
-            for batch_num in range(total_batches):
-                start_idx = batch_num * self.batch_size
-                end_idx = start_idx + self.batch_size
-                batch = events[start_idx:end_idx]
-                
-                batch_inserted = self._insert_events_batch(
-                    batch, file_name, batch_num + 1, total_batches
-                )
-                total_inserted += batch_inserted
-        
-        return total_inserted
+            return self._copy_events_via_stage(events, file_name)
     
     def record_load_success(
         self,

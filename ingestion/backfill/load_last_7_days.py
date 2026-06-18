@@ -31,7 +31,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from ingestion.utils.helpers import (
     get_logger,
-    get_last_n_days,
     get_date_hour_string,
     get_file_hour_timestamp,
     Timer,
@@ -82,7 +81,7 @@ class BackfillProcessor:
     
     def generate_file_list(self) -> List[Tuple[datetime, int]]:
         """
-        Generate list of (date, hour) tuples for past N days.
+        Generate list of (date, hour) tuples for the last N rolling days.
         
         Returns:
             List of (datetime, hour) tuples
@@ -93,12 +92,18 @@ class BackfillProcessor:
             >>> len(files)
             48  # 2 days * 24 hours
         """
-        dates = get_last_n_days(self.days)
+        latest_hour = datetime.now(timezone.utc).replace(
+            minute=0,
+            second=0,
+            microsecond=0,
+        ) - timedelta(hours=1)
+        start_hour = latest_hour - timedelta(hours=(self.days * 24) - 1)
         file_list = []
-        
-        for date in dates:
-            for hour in range(24):
-                file_list.append((date, hour))
+
+        current_hour = start_hour
+        while current_hour <= latest_hour:
+            file_list.append((current_hour, current_hour.hour))
+            current_hour += timedelta(hours=1)
         
         logger.info(f"Generated list of {len(file_list)} files to load")
         return file_list

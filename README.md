@@ -1,6 +1,6 @@
 # GitHub Analytics Pipeline
 
-A production-grade, end-to-end data engineering solution that ingests GitHub events from GH Archive, transforms them using dbt, and serves analytics-ready data to Power BI. Built with a focus on scalability, reliability, and maintainability.
+A production-grade, end-to-end data engineering solution that ingests GitHub events from GH Archive, transforms them using dbt, documents analytics-ready marts, and orchestrates the workflow with Airflow. Built with a focus on scalability, reliability, and maintainability.
 
 ## 📋 Project Overview
 
@@ -11,8 +11,20 @@ This project demonstrates enterprise data engineering best practices by building
 - **Transforms** data through staging and mart layers using dbt
 - **Models** dimensional and fact tables for analytics
 - **Tests** data quality at every layer
-- **Visualizes** insights via Power BI dashboards
+- **Documents** lineage, model contracts, and portfolio-ready artifacts
 - **Orchestrates** the entire workflow with Apache Airflow
+
+## Portfolio Snapshot
+
+| Area | Status |
+|------|--------|
+| Ingestion | Python backfill and hourly incremental loaders implemented |
+| Warehouse | Snowflake RAW tables and load-history tracking validated with live data |
+| Transformation | dbt staging, dimensions, and fact model implemented |
+| Quality | dbt tests, custom SQL checks, and freshness checks documented |
+| Documentation | dbt docs screenshots and data dictionary added |
+| Orchestration | Airflow DAG enabled and validated |
+| Dashboard | Phase 13 Power BI work skipped for now |
 
 ---
 
@@ -141,7 +153,7 @@ github-analytics-pipeline/
 ├── scheduler/                          # Orchestration
 │   ├── run_pipeline.bat               # Windows Task Scheduler script
 │   ├── windows_task_scheduler.md      # Setup instructions
-│   └── airflow/                       # (Future) Airflow DAGs
+│   └── airflow/                       # Airflow DAGs
 │       └── dags/
 │           └── github_pipeline_dag.py # Orchestration workflow
 │
@@ -163,10 +175,22 @@ github-analytics-pipeline/
 
 - **Python 3.11+**
 - **Snowflake Account** (with adequate warehouse & storage)
-- **dbt CLI** (installed via requirements.txt)
+- **Docker Desktop** (required for the local Airflow hourly scheduler)
 - **Snowflake Credentials** (user, password, account identifier)
 
-### Setup
+### Fresh Machine Setup
+
+After cloning this repo on a new machine:
+
+```bash
+cp .env.example .env
+# Fill .env with Snowflake values, then:
+bash scripts/setup_fresh_machine.sh
+```
+
+This creates a local virtual environment, installs pipeline/dbt dependencies, starts Airflow with Docker, creates Snowflake objects, loads rolling 7 days of history, runs dbt, and enables the hourly DAG.
+
+### Manual Setup
 
 1. **Clone or create the project**
    ```bash
@@ -181,13 +205,13 @@ github-analytics-pipeline/
 
 3. **Install dependencies**
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements-pipeline.txt
    ```
 
 4. **Configure environment variables**
    ```bash
-   cp .env .env.local  # Create local copy
-   # Edit .env.local with your Snowflake credentials
+   cp .env.example .env
+   # Edit .env with your Snowflake credentials
    ```
 
 5. **Test Snowflake connection**
@@ -264,7 +288,7 @@ github-analytics-pipeline/
 - Add data dictionary with business glossary
 - Document dbt artifacts and troubleshooting steps
 
-### 📊 Phase 13: Power BI Dashboard
+### 📊 Phase 13: Power BI Dashboard (Skipped for Now)
 - Connect to Snowflake marts
 - Create KPI cards and visualizations
 - Build interactive drill-down reports
@@ -276,7 +300,7 @@ github-analytics-pipeline/
 - Implement monitoring and failure alerts
 - Add backfill and recovery workflows
 
-### 🎖️ Phase 15: Portfolio Readiness
+### 🎖️ Phase 15: Portfolio Readiness (Current)
 - Update README with architecture diagrams
 - Add project screenshots and metrics
 - Create resume bullet points
@@ -334,7 +358,11 @@ github-analytics-pipeline/
 - [SETUP_GUIDE.md](docs/SETUP_GUIDE.md) - Environment setup instructions
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Detailed system architecture
 - [DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md) - Table and column definitions
+- [END_TO_END_PROJECT_OVERVIEW.md](docs/END_TO_END_PROJECT_OVERVIEW.md) - Full problem, solution, architecture, runtime proof, and portfolio story
+- [PORTFOLIO_ONE_PAGER.md](docs/PORTFOLIO_ONE_PAGER.md) - Concise project summary for reviewers
 - [PHASE12_DBT_DOCS.md](docs/PHASE12_DBT_DOCS.md) - dbt docs, lineage, and screenshot workflow
+- [PHASE14_AIRFLOW.md](docs/PHASE14_AIRFLOW.md) - Airflow DAG and orchestration workflow
+- [PHASE15_PORTFOLIO_READINESS.md](docs/PHASE15_PORTFOLIO_READINESS.md) - Portfolio summary, resume bullets, and final checklist
 - [dbt-lineage.png](docs/screenshots/dbt-lineage.png) - dbt docs overview/lineage entry point
 - [dbt-fact_events.png](docs/screenshots/dbt-fact_events.png) - fact model documentation screenshot
 - [dbt-dim_actor.png](docs/screenshots/dbt-dim_actor.png) - actor dimension documentation screenshot
@@ -370,4 +398,16 @@ Portfolio project - for demonstration and learning purposes.
 
 **Last Updated**: June 2026  
 **Status**: 🚀 In Development  
-**Current Phase**: 13 - Power BI Dashboard
+**Current Phase**: 15 - Portfolio Readiness
+**Portfolio Status**: Portfolio-ready draft; runtime validation caveats documented
+
+
+
+git clone <your-repo-url>
+cd github-analytics-pipeline
+cp .env.example .env
+# fill Snowflake account details in .env
+bash scripts/setup_fresh_machine.sh
+
+
+bash scripts/bootstrap_new_snowflake_account.sh

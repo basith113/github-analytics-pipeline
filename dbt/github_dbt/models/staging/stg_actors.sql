@@ -13,30 +13,51 @@
 -- Grain: One row per unique actor
 -- Purpose: Foundation for dim_actor dimension table
 
-WITH unique_actors AS (
-  SELECT DISTINCT
+WITH actor_events AS (
+  SELECT
     actor_id,
     actor_login,
-    actor_type,
-    FIRST_VALUE(created_at) OVER (
-      PARTITION BY actor_id 
-      ORDER BY created_at
-    ) as first_seen_at,
-    MAX(created_at) OVER (
-      PARTITION BY actor_id
-    ) as last_seen_at
+    CASE
+      WHEN actor_type IS NOT NULL THEN actor_type
+      WHEN actor_login ILIKE '%[bot]' OR actor_login ILIKE '%bot%' THEN 'Bot'
+      ELSE 'User'
+    END AS actor_type,
+    created_at
   FROM {{ ref('stg_github_events') }}
   WHERE actor_id IS NOT NULL
     AND actor_login IS NOT NULL
+),
+
+actor_rollup AS (
+  SELECT
+    actor_id,
+    MIN(created_at) AS first_seen_at,
+    MAX(created_at) AS last_seen_at
+  FROM actor_events
+  GROUP BY actor_id
+),
+
+latest_actor AS (
+  SELECT
+    actor_id,
+    actor_login,
+    actor_type
+  FROM actor_events
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY actor_id
+    ORDER BY created_at DESC, actor_login
+  ) = 1
 )
 
 SELECT 
-  actor_id,
-  actor_login,
-  actor_type,
-  first_seen_at,
-  last_seen_at,
-  DATEDIFF(day, first_seen_at, last_seen_at) as days_active,
+  actor_rollup.actor_id,
+  latest_actor.actor_login,
+  latest_actor.actor_type,
+  actor_rollup.first_seen_at,
+  actor_rollup.last_seen_at,
+  DATEDIFF(day, actor_rollup.first_seen_at, actor_rollup.last_seen_at) as days_active,
   CURRENT_TIMESTAMP() as dbt_loaded_at
-FROM unique_actors
-ORDER BY actor_id
+FROM actor_rollup
+INNER JOIN latest_actor
+  ON actor_rollup.actor_id = latest_actor.actor_id
+ORDER BY actor_rollup.actor_id

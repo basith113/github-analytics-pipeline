@@ -1,0 +1,13 @@
+.git
+.venv
+venv
+.env
+.airflow
+logs
+__pycache__
+*.pyc
+*.log
+dbt/github_dbt/target
+dbt/github_dbt/dbt_packages
+docs/screenshots
+

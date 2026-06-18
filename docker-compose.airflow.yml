@@ -1,0 +1,37 @@
+services:
+  github-airflow:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    container_name: github-airflow
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/repo/scheduler/airflow/dags
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      PIPELINE_REPO_ROOT: /opt/airflow/repo
+      PIPELINE_PYTHON_BIN: python
+      DBT_BIN: dbt
+      DBT_PROJECT_DIR: /opt/airflow/repo/dbt/github_dbt
+      DBT_PROFILES_DIR: /opt/airflow/repo/dbt
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./.airflow:/opt/airflow
+      - ./:/opt/airflow/repo
+    command: >
+      bash -lc "
+      airflow db migrate;
+      airflow users create
+      --username admin
+      --firstname Admin
+      --lastname User
+      --role Admin
+      --email admin@example.com
+      --password admin || true;
+      airflow scheduler &
+      exec airflow webserver --port 8080
+      "

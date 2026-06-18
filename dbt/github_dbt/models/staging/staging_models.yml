@@ -28,8 +28,7 @@ models:
         tests:
           - not_null
           - accepted_values:
-              arguments:
-                values: ['User', 'Bot']
+              values: ['User', 'Bot']
       
       - name: first_seen_at
         description: First time this actor appeared in events

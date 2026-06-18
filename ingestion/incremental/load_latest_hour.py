@@ -26,7 +26,7 @@ Exit Codes:
 
 import sys
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -37,6 +37,7 @@ from ingestion.utils.helpers import (
     get_logger,
     get_latest_available_file_name,
     parse_date_hour_string,
+    get_date_hour_string,
     get_file_hour_timestamp,
     Timer,
 )
@@ -89,18 +90,31 @@ class IncrementalLoader:
         """
         logger.info(f"Checking for new files (look_back_hours={self.look_back_hours})")
         
-        file_name = get_latest_available_file_name()
-        date, hour = parse_date_hour_string(file_name)
-        
-        logger.info(f"Latest available file: {file_name}")
-        
-        # Check if already loaded
-        if self.loader.file_already_loaded(file_name):
-            logger.info(f"File already loaded: {file_name}")
-            return None
-        
-        logger.info(f"New file found: {file_name}")
-        return (file_name, date, hour)
+        current_hour = datetime.now(timezone.utc).replace(
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+
+        for hours_back in range(1, self.look_back_hours + 1):
+            file_hour = current_hour - timedelta(hours=hours_back)
+            file_name = f"{get_date_hour_string(file_hour, file_hour.hour)}.json.gz"
+
+            logger.info(f"Checking candidate file: {file_name}")
+
+            if self.loader.file_already_loaded(file_name):
+                logger.info(f"File already loaded: {file_name}")
+                continue
+
+            if not self.client.file_exists(file_hour, file_hour.hour):
+                logger.info(f"File is not available yet: {file_name}")
+                continue
+
+            logger.info(f"New file found: {file_name}")
+            return (file_name, file_hour, file_hour.hour)
+
+        logger.info("No new available files found")
+        return None
     
     def process(self) -> Tuple[bool, str, Optional[int]]:
         """

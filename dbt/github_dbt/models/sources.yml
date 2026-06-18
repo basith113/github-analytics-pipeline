@@ -7,7 +7,7 @@ version: 2
 sources:
   - name: github_archive
     description: "Raw GitHub events from GH Archive (https://www.gharchive.org)"
-    database: GITHUB_DBT
+    database: "{{ env_var('SNOWFLAKE_DATABASE', 'GITHUB_DBT') }}"
     schema: RAW
     loader: GH Archive + Python ingestion scripts (Phases 4-5)
     config:
@@ -121,8 +121,7 @@ sources:
             data_type: VARCHAR
             tests:
               - accepted_values:
-                  arguments:
-                    values: ['SUCCESS', 'FAILED', 'SKIPPED', 'RETRY']
+                  values: ['SUCCESS', 'FAILED', 'SKIPPED', 'RETRY']
           
           - name: error_message
             description: "Error details if status is FAILED"

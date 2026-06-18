@@ -27,11 +27,10 @@ models:
         tests:
           - not_null
           - accepted_values:
-              arguments:
-                values: ['PushEvent', 'PullRequestEvent', 'IssuesEvent', 
-                         'IssueCommentEvent', 'WatchEvent', 'ForkEvent',
-                         'CreateEvent', 'DeleteEvent', 'MemberEvent', 
-                         'ReleaseEvent', 'PullRequestReviewEvent']
+              values: ['PushEvent', 'PullRequestEvent', 'IssuesEvent', 
+                       'IssueCommentEvent', 'WatchEvent', 'ForkEvent',
+                       'CreateEvent', 'DeleteEvent', 'MemberEvent', 
+                       'ReleaseEvent', 'PullRequestReviewEvent']
       
       - name: actor_id
         description: Unique ID of the GitHub user/bot that triggered the event
@@ -47,8 +46,7 @@ models:
         description: Type of actor - User or Bot
         tests:
           - accepted_values:
-              arguments:
-                values: ['User', 'Bot']
+              values: ['User', 'Bot']
       
       - name: repo_id
         description: Unique repository ID

@@ -237,4 +237,4 @@ powershell -ExecutionPolicy Bypass -File scripts/generate_and_capture_dbt_docs.p
 
 **Status**: Local/static documentation complete; warehouse catalog pending Snowflake account fix  
 **Phase**: 12 of 15  
-**Next Phase**: Phase 13 - Power BI Dashboard
+**Next Phase**: Phase 14 - Apache Airflow (Phase 13 skipped for now)

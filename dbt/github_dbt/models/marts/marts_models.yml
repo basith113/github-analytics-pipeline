@@ -43,8 +43,7 @@ models:
         tests:
           - not_null
           - accepted_values:
-              arguments:
-                values: ['User', 'Bot']
+              values: ['User', 'Bot']
       
       - name: is_bot
         description: Boolean flag (true if actor_type = Bot)
@@ -184,11 +183,10 @@ models:
           - not_null
           - unique
           - accepted_values:
-              arguments:
-                values: ['PushEvent', 'PullRequestEvent', 'IssuesEvent',
-                        'IssueCommentEvent', 'WatchEvent', 'ForkEvent',
-                        'CreateEvent', 'DeleteEvent', 'MemberEvent',
-                        'ReleaseEvent', 'PullRequestReviewEvent']
+              values: ['PushEvent', 'PullRequestEvent', 'IssuesEvent',
+                      'IssueCommentEvent', 'WatchEvent', 'ForkEvent',
+                      'CreateEvent', 'DeleteEvent', 'MemberEvent',
+                      'ReleaseEvent', 'PullRequestReviewEvent']
       
       - name: event_description
         description: Human-readable description of event type
@@ -200,9 +198,8 @@ models:
         tests:
           - not_null
           - accepted_values:
-              arguments:
-                values: ['Activity', 'Repository Management', 'Engagement', 
-                        'Collaboration', 'Other']
+              values: ['Activity', 'Repository Management', 'Engagement', 
+                      'Collaboration', 'Other']
       
       - name: event_count
         description: Total events of this type in dataset
@@ -276,27 +273,24 @@ models:
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('dim_actor')
-                field: actor_key
+              to: ref('dim_actor')
+              field: actor_key
       
       - name: repo_key
         description: Foreign key to dim_repository
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('dim_repository')
-                field: repo_key
+              to: ref('dim_repository')
+              field: repo_key
       
       - name: event_type_key
         description: Foreign key to dim_event_type
         tests:
           - not_null
           - relationships:
-              arguments:
-                to: ref('dim_event_type')
-                field: event_type_key
+              to: ref('dim_event_type')
+              field: event_type_key
       
       - name: event_type
         description: Event type (denormalized for query performance)
